@@ -301,8 +301,8 @@ body.dark .dm-btn:hover{background:#363644}
 
   <div id="optionalSection">
     <div class="optional-divider">
-      <span>Weitere Möglichkeiten aus dem DAV-Trainingsskript</span>
-      <span class="optional-hint">Nicht Teil des aktuellen Trainingsplans – als Ergänzung oder Inspiration</span>
+      <span>Ergänzende Einheiten aus dem DAV-Trainingsskript</span>
+      <span class="optional-hint">Zusätzliche Impulse für passende Situationen oder neue Schwerpunkte</span>
     </div>
     <div class="eu-grid" id="optGrid"></div>
   </div>
@@ -613,6 +613,27 @@ const OPTIONAL_EU = [
    x:'Kletterer soll wissen: es geht ums Atmen, nicht ums Ankommen oben'}
 ];
 
+function stripHtml(text) {
+  return String(text || '')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function makeSearchText(...parts) {
+  return parts.map(stripHtml).filter(Boolean).join(' ').toLowerCase();
+}
+
+function escapeAttr(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function renderEUCard(eu, i, isOptional) {
   const prefix = isOptional ? 'opt' : 'eu';
   const idx = isOptional ? `o${i}` : i;
@@ -624,8 +645,10 @@ function renderEUCard(eu, i, isOptional) {
   const dataO = eu.o.includes('/') ? 'both' : eu.o === 'Kletterhalle' ? 'KH' : 'BH';
   const focusKeys = inferFocusKeys(eu).join(',');
   const optClass = isOptional ? ' optional' : '';
-  const optBadge = isOptional ? `<span class="opt-badge">Optional</span>` : '';
-  return `<div class="eu-card${optClass}" id="${prefix}-${i}" data-f="${eu.f}" data-k="${focusKeys}" data-o="${dataO}" data-n="${eu.n.toLowerCase()}" data-desc="${eu.desc.toLowerCase()}">
+  const optBadge = isOptional ? `<span class="opt-badge">Ergänzung</span>` : '';
+  const searchName = escapeAttr(makeSearchText(eu.n));
+  const searchDesc = escapeAttr(makeSearchText(eu.desc));
+  return `<div class="eu-card${optClass}" id="${prefix}-${i}" data-f="${eu.f}" data-k="${focusKeys}" data-o="${dataO}" data-n="${searchName}" data-desc="${searchDesc}">
   <div class="eu-head">
     <div class="eu-head-top">
       <div class="eu-title">${eu.n}</div>
@@ -659,6 +682,17 @@ function fallbackCopyText(text) {
   return ok;
 }
 
+function formatHtmlForWhatsApp(html) {
+  return String(html || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<(strong|b)>(.*?)<\/\1>/gi, '*$2*')
+    .replace(/<(em|i)>(.*?)<\/\1>/gi, '_$2_')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 
 function inferFocusKeys(eu) {
   if (!eu.k) return [];
@@ -670,7 +704,7 @@ function inferFocusKeys(eu) {
 
 
 document.getElementById('wuGrid').innerHTML = WARMUPS.map((w, i) => `
-  <div class="simple-card warmup-card" data-o="${w.o}" data-t="${w.t}" data-text="${(w.d + ' ' + w.o + ' ' + w.t).toLowerCase()}" id="wu-${i}">
+  <div class="simple-card warmup-card" data-o="${escapeAttr(w.o)}" data-t="${escapeAttr(w.t)}" data-text="${escapeAttr(makeSearchText(w.d, w.o, w.t))}" id="wu-${i}">
     <div class="simple-head">
       <div class="simple-title">Aufwärmen</div>
       <div class="simple-meta">
@@ -685,7 +719,7 @@ document.getElementById('wuGrid').innerHTML = WARMUPS.map((w, i) => `
 document.getElementById('stretchGrid').innerHTML = STRETCHES.map((s, i) => {
   const type = inferStretchType(s);
   return `
-  <div class="simple-card stretch-card" data-type="${type}" data-text="${(s.idea + ' ' + (s.link || '')).toLowerCase()}" id="stretch-${i}">
+  <div class="simple-card stretch-card" data-type="${escapeAttr(type)}" data-text="${escapeAttr(makeSearchText(s.idea, s.link || ''))}" id="stretch-${i}">
     <div class="simple-head">
       <div class="simple-title">Dehnen / Mobilität</div>
       <div class="simple-meta">
@@ -764,13 +798,13 @@ function filterStretchType(v, btn) {
 
 function copyCardByRef(arr, i, btnId) {
   const eu = arr[i];
-  const lines = [eu.n];
-  if (eu.o) lines.push(`Ort: ${eu.o}`);
-  if (eu.f) lines.push(`Intensität: ${eu.f.split(',').map(c => BL[c.trim()]).join(', ')}`);
-  if (eu.s) lines.push(`Schwerpunkt: ${eu.s}`);
-  if (eu.d) lines.push(`Dauer: ${eu.d}`);
-  lines.push('', eu.desc.replace(/<br><br>/g,'\n\n').replace(/<[^>]+>/g,''));
-  if (eu.x) lines.push('', `Zusatzaufgabe: ${eu.x}`);
+  const lines = [`*${eu.n}*`];
+  if (eu.o) lines.push(`*Ort:* ${eu.o}`);
+  if (eu.f) lines.push(`*Intensität:* ${eu.f.split(',').map(c => BL[c.trim()]).join(', ')}`);
+  if (eu.s) lines.push(`*Schwerpunkt:* ${eu.s}`);
+  if (eu.d) lines.push(`*Dauer:* ${eu.d}`);
+  lines.push('', formatHtmlForWhatsApp(eu.desc));
+  if (eu.x) lines.push('', `*Zusatzaufgabe:* ${eu.x}`);
   const text = lines.join('\n');
   const done = (ok) => {
     const btn = document.getElementById(btnId);
