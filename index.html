@@ -101,6 +101,8 @@ body.fs-sm{font-size:12px}
 .eu-foot{padding:0 14px 12px}
 .eu-foot-lbl{font-size:.72em;font-weight:500;color:#aaa;text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
 .eu-foot-txt{font-size:.82em;color:#666;line-height:1.5}
+.eu-more{padding:0 14px 12px;font-size:.8em;color:#185FA5;font-weight:500}
+body.dark .eu-more{color:#6aadff}
 
 .badge{font-size:.78em;padding:2px 8px;border-radius:10px;font-weight:500;white-space:nowrap}
 .b-rot{background:#FCEBEB;color:#A32D2D}
@@ -862,6 +864,7 @@ async function loadUnits() {
               s: String(row.focus_label ?? '').trim(),
               d: String(row.duration ?? '').trim(),
               desc: requireString(row.description, `${ctx} description`),
+              summary: String(row.summary ?? '').trim(),
               x: String(row.extra ?? '').trim(),
               b: String(row.benefit ?? '').trim(),
               optional: parseOptionalFlag(row.optional, `${ctx} optional`),
@@ -1054,13 +1057,13 @@ function renderEUCard(eu, i, isOptional, extraPrefix, extraArrName) {
   const ort  = `<span class="badge b-ort">${eu.o}</span>`;
   const swb  = eu.s ? `<span class="badge b-sw">${eu.s}</span>` : '';
   const dur  = eu.d ? `<span class="badge b-dur">${eu.d}</span>` : '';
-  const foot = eu.x ? `<div class="eu-foot"><div class="eu-foot-lbl">Zusatzaufgabe</div><div class="eu-foot-txt">${eu.x}</div></div>` : '';
   const dataO = eu.o.includes('/') ? 'both' : eu.o === 'Kletterhalle' ? 'KH' : 'BH';
   const focusKeys = inferFocusKeys(eu).join(',');
   const optClass = (!extraPrefix && isOptional) ? ' optional' : '';
   const optBadge = (!extraPrefix && isOptional) ? `<span class="opt-badge">Ergänzung</span>` : '';
+  const cardText = eu.summary || eu.desc;
   const searchName = escapeAttr(makeSearchText(eu.n));
-  const searchDesc = escapeAttr(makeSearchText(eu.desc));
+  const searchDesc = escapeAttr(makeSearchText(eu.desc, eu.summary));
   return `<div class="eu-card${optClass}" id="${prefix}-${i}" data-f="${escapeAttr(eu.f)}" data-k="${escapeAttr(focusKeys)}" data-o="${escapeAttr(dataO)}" data-n="${searchName}" data-desc="${searchDesc}" onclick="openUnitDetailByEuId('${escapeAttr(eu.id)}')">
   <div class="eu-head">
     <div class="eu-head-top">
@@ -1069,8 +1072,8 @@ function renderEUCard(eu, i, isOptional, extraPrefix, extraArrName) {
     </div>
     <div class="eu-meta">${badges}${ort}${swb}${dur}</div>
   </div>
-  <div class="eu-body">${eu.desc}</div>
-  ${foot}
+  <div class="eu-body">${cardText}</div>
+  <div class="eu-more">Details ansehen →</div>
 </div>`;
 }
 
